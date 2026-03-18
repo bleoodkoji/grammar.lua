@@ -919,63 +919,65 @@ end
 local function sendToChat(msg)
     if not msg or trim(msg) == "" then return false end
 
-    local gui = LocalPlayer:FindFirstChild("PlayerGui")
-    if not gui then return false end
-
-    -- Find Roblox chat TextBox
-    local chatBox = nil
-    for _, v in ipairs(gui:GetDescendants()) do
-        if v:IsA("TextBox") and v.Visible and v ~= inputBox then
-            local name = v.Name:lower()
-            local ph   = v.PlaceholderText:lower()
-            if name == "chatbar" or name == "chatinput" or name == "input"
-            or ph:find("chat") or ph:find("say") or ph:find("to chat")
-            or ph:find("message") or ph:find("press") or ph:find("type") then
-                chatBox = v
-                break
-            end
-        end
-    end
-
-    -- Fallback: any visible TextBox that isn't ours
-    if not chatBox then
-        for _, v in ipairs(gui:GetDescendants()) do
-            if v:IsA("TextBox") and v.Visible and v ~= inputBox then
-                chatBox = v; break
-            end
-        end
-    end
-
-    if chatBox then
-        chatBox:CaptureFocus()
-        task.wait(0.05)
-        chatBox.Text = msg
-        task.wait(0.05)
-        -- Try VirtualInputManager first (some executors support this)
-        local vim = game:GetService("VirtualInputManager")
-        if vim then
-            pcall(function()
-                vim:SendKeyEvent(true,  Enum.KeyCode.Return, false, game)
-                vim:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
-            end)
-        end
-        -- Always also call ReleaseFocus as backup
-        chatBox:ReleaseFocus(true)
-        return true
-    end
-
-    -- Last resort: TextChannel SendAsync
+    -- Method 1: TextChannel:SendAsync — works in many games
     local ok = false
     pcall(function()
         local channels = TextChatService:FindFirstChild("TextChannels")
         if channels then
             for _, ch in ipairs(channels:GetChildren()) do
                 if ch:IsA("TextChannel") then
-                    ch:SendAsync(msg); ok = true; break
+                    ch:SendAsync(msg)
+                    ok = true
+                    break
                 end
             end
         end
     end)
+    if ok then return true end
+
+    -- Method 2: Find chat input in CoreGui (new TextChatService UI)
+    pcall(function()
+        local coreGui = game:GetService("CoreGui")
+        for _, v in ipairs(coreGui:GetDescendants()) do
+            if v:IsA("TextBox") and v.Visible then
+                local name = v.Name:lower()
+                local ph   = v.PlaceholderText:lower()
+                if name:find("chat") or name:find("input") or name:find("bar")
+                or ph:find("chat") or ph:find("say") or ph:find("message")
+                or ph:find("to chat") or ph:find("type") then
+                    v:CaptureFocus()
+                    task.wait(0.05)
+                    v.Text = msg
+                    task.wait(0.05)
+                    v:ReleaseFocus(true)
+                    ok = true
+                    break
+                end
+            end
+        end
+    end)
+    if ok then return true end
+
+    -- Method 3: PlayerGui fallback
+    pcall(function()
+        local gui = LocalPlayer:FindFirstChild("PlayerGui")
+        if not gui then return end
+        for _, v in ipairs(gui:GetDescendants()) do
+            if v:IsA("TextBox") and v.Visible and v ~= inputBox then
+                local ph = v.PlaceholderText:lower()
+                if ph:find("chat") or ph:find("say") or ph:find("message") or ph:find("to chat") then
+                    v:CaptureFocus()
+                    task.wait(0.05)
+                    v.Text = msg
+                    task.wait(0.05)
+                    v:ReleaseFocus(true)
+                    ok = true
+                    break
+                end
+            end
+        end
+    end)
+
     return ok
 end
 
@@ -984,7 +986,7 @@ end
 -- Uses Groq free API — llama-3.3-70b — called directly from
 -- the LocalScript. No server bridge needed with an executor.
 -- ============================================================
-local GROQ_KEY   = "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"   -- ← 
+local GROQ_KEY   = "YOUR_API_KEY_HERE"   -- ← paste your Groq key here
 local GROQ_URL   = "https://api.groq.com/openai/v1/chat/completions"
 local GROQ_MODEL = "llama-3.3-70b-versatile"
 local togAI      = true   -- controlled by the AI toggle in Settings
@@ -1053,7 +1055,7 @@ local function aiCorrect(text, onSuccess, onFail)
         onFail("No HTTP function found — make sure your executor supports http.request")
         return
     end
-    if GROQ_KEY == "YOUR_API_KEY_HERE" or #GROQ_KEY < 20 then
+    if GROQ_KEY == "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" or #GROQ_KEY < 20 then
         onFail("Groq API key not set — paste your key into GROQ_KEY at the top of the script")
         return
     end

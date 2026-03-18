@@ -983,7 +983,7 @@ end
 -- Uses Groq free API — llama-3.3-70b — called directly from
 -- the LocalScript. No server bridge needed with an executor.
 -- ============================================================
-local GROQ_KEY   = "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"   -- ← paste your Groq key here
+local GROQ_KEY   = "gsk_Iewc6UvMnUSh6Tibyf4EWGdyb3FY21Oi9NVGEL8bsiBBHoBy9PdPE"   -- ← paste your Groq key here
 local GROQ_URL   = "https://api.groq.com/openai/v1/chat/completions"
 local GROQ_MODEL = "llama-3.3-70b-versatile"
 local togAI      = true   -- controlled by the AI toggle in Settings
